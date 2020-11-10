@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { Layout } from "~/components/ui/Layout";
 import { HelloResponse } from "~/pages/api/hello";
 
-const Index: NextPage = () => {
+const Homepage: NextPage = () => {
   const { data } = useSWR<HelloResponse>("/api/hello");
 
   return (
@@ -20,4 +20,4 @@ const Index: NextPage = () => {
   );
 };
 
-export default Index;
+export default Homepage;

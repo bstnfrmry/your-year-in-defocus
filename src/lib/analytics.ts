@@ -1,15 +1,17 @@
 import ReactGA from "react-ga";
 
-export const initAnalytics = (): void => {
-  if (process.env.NODE_ENV === "development") return;
+import { config } from "~/config";
 
-  if (process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID) {
-    ReactGA.initialize(process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID);
+export const initAnalytics = (): void => {
+  if (config.app.debug) return;
+
+  if (config.googleAnalytics.trackingCode) {
+    ReactGA.initialize(config.googleAnalytics.trackingCode);
   }
 };
 
 export const logPageView = (): void => {
-  if (process.env.NODE_ENV === "development") return;
+  if (config.app.debug) return;
 
   ReactGA.set({ page: window.location.pathname });
   ReactGA.pageview(window.location.pathname);
