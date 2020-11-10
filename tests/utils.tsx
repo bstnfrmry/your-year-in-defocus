@@ -1,5 +1,7 @@
 import { render, RenderOptions, RenderResult } from "@testing-library/react";
 import { setupServer } from "msw/node";
+import { NextApiHandler, NextApiRequest, NextApiResponse } from "next";
+import { createMocks, MockRequest, MockResponse, RequestOptions } from "node-mocks-http";
 import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { SWRConfig } from "swr";
@@ -26,6 +28,25 @@ export { customRender as render };
 export { rest } from "msw";
 
 export const server = setupServer();
+
+export type ApiResponse<T> = {
+  statusCode: number;
+  json: T;
+};
+
+export const callApi = async <T extends unknown>(
+  handler: NextApiHandler<T>,
+  options?: RequestOptions
+): Promise<ApiResponse<T>> => {
+  const { req, res } = createMocks(options);
+
+  await handler(req, res);
+
+  return {
+    statusCode: res._getStatusCode(),
+    json: res._getJSONData(),
+  };
+};
 
 beforeAll(() => server.listen());
 

@@ -6,7 +6,7 @@ export type HelloResponse = {
 
 const Hello: NextApiHandler<HelloResponse> = (req, res) => {
   res.statusCode = 200;
-  res.json({ name: "John Doe" });
+  res.json({ name: req.query.name as string });
 };
 
 export default Hello;
