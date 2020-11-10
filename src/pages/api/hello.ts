@@ -4,7 +4,7 @@ export type HelloResponse = {
   name: string;
 };
 
-const Hello: NextApiHandler = (req, res) => {
+const Hello: NextApiHandler<HelloResponse> = (req, res) => {
   res.statusCode = 200;
   res.json({ name: "John Doe" });
 };
