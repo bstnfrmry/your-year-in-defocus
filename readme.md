@@ -3,10 +3,12 @@
 ## Included
 
 - TypeScript
-- ESLint/Prettier
+- ESLint / Prettier
 - Tailwind
 - i18n
 - Google Analytics
+- SWR
+- Jest / Testing Library / MSW
 
 ## Requirements
 
