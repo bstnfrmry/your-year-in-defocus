@@ -6,6 +6,7 @@ import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { SWRConfig } from "swr";
 
+import { Meta } from "~/components/Meta";
 import { i18n } from "~/i18n/config";
 import { initAnalytics, logPageView } from "~/lib/analytics";
 import { fetcher } from "~/lib/fetcher";
@@ -29,6 +30,7 @@ class App extends NextApp {
     return (
       <SWRConfig value={{ fetcher }}>
         <I18nextProvider i18n={i18n}>
+          <Meta />
           <Component {...pageProps} />
         </I18nextProvider>
       </SWRConfig>
