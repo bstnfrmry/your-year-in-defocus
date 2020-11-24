@@ -5,6 +5,7 @@ import useSWR from "swr";
 
 import { Layout } from "~/components/ui/Layout";
 import { HelloResponse } from "~/pages/api/hello";
+import { SlackButton } from "~/components/SlackButton";
 
 const Homepage: NextPage = () => {
   const { data } = useSWR<HelloResponse>("/api/hello");
@@ -13,7 +14,7 @@ const Homepage: NextPage = () => {
     <Layout className="items-center justify-center">
       {data && (
         <h1>
-          <Trans i18nKey="index.title" values={{ name: data.name }} />
+          <SlackButton />
         </h1>
       )}
     </Layout>

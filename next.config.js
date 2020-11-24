@@ -3,4 +3,7 @@ module.exports = {
     locales: ["en", "fr"],
     defaultLocale: "en",
   },
+  images: {
+    domains: ["platform.slack-edge.com"],
+  },
 };
