@@ -4,6 +4,6 @@ module.exports = {
     defaultLocale: "en",
   },
   images: {
-    domains: ["platform.slack-edge.com"],
+    domains: ["platform.slack-edge.com", "avatars.slack-edge.com", "a.slack-edge.com"],
   },
 };

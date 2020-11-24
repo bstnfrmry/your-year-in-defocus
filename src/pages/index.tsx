@@ -1,22 +1,18 @@
 import { NextPage } from "next";
 import React from "react";
-import { Trans } from "react-i18next";
-import useSWR from "swr";
 
-import { Layout } from "~/components/ui/Layout";
-import { HelloResponse } from "~/pages/api/hello";
 import { SlackButton } from "~/components/SlackButton";
+import { Layout } from "~/components/ui/Layout";
 
 const Homepage: NextPage = () => {
-  const { data } = useSWR<HelloResponse>("/api/hello");
-
   return (
     <Layout className="items-center justify-center">
-      {data && (
-        <h1>
-          <SlackButton />
-        </h1>
-      )}
+      <div className="flex flex-col h-full justify-center items-center space-y-4">
+        <header className="text-center font-raleway">
+          <h2 className="text-2xl font-semibold">Your Year In Defocus</h2>
+        </header>
+        <SlackButton />
+      </div>
     </Layout>
   );
 };

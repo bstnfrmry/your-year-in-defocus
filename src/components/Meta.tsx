@@ -30,6 +30,8 @@ export const Meta: React.FC = () => {
       <meta key="twitterDescription" content={description} name="twitter:description" />
       <meta key="twitterImage" content={ogImageUrl} name="twitter:image" />
       <meta key="twitterCard" content="summary_large_image" name="twitter:card"></meta>
+
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet" />
     </Head>
   );
 };

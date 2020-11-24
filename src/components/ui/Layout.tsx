@@ -7,11 +7,11 @@ export const Layout: React.FC<Props> = ({ className, children, ...props }) => {
   return (
     <div
       className={classNames(className, {
-        "w-full h-full overflow-y-scroll flex flex-col": true,
+        "w-full h-full flex flex-col": true,
       })}
       {...props}
     >
-      {children}
+      <div className="container mx-auto h-full flex flex-col items-center">{children}</div>
     </div>
   );
 };

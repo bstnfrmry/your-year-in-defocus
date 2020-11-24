@@ -4,7 +4,7 @@ import { config } from "~/config";
 
 export { Op } from "sequelize";
 
-const sequelize = new Sequelize(config.database.uri, {
+export const sequelize = new Sequelize(config.database.uri, {
   logging: false,
   define: {
     underscored: true,
@@ -12,16 +12,34 @@ const sequelize = new Sequelize(config.database.uri, {
   },
 });
 
-type UserModel = Model<{
+export type TeamModel = {
+  id: string;
+  publicId: string;
+  name: string;
+};
+
+export const Team = sequelize.define<Model<TeamModel>>(
+  "team",
+  {
+    id: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
+    publicId: { type: DataTypes.STRING, allowNull: false },
+    name: { type: DataTypes.STRING, allowNull: false },
+  },
+  {
+    indexes: [{ fields: ["public_id"] }],
+  }
+);
+
+export type UserModel = {
   id: string;
   teamId: string;
   name: string;
   realName: string;
   isBot: boolean;
   raw: any;
-}>;
+};
 
-export const User = sequelize.define<UserModel>(
+export const User = sequelize.define<Model<UserModel>>(
   "user",
   {
     id: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
@@ -36,16 +54,16 @@ export const User = sequelize.define<UserModel>(
   }
 );
 
-type GroupModel = Model<{
+export type GroupModel = {
   id: string;
   teamId: string;
   handle: string;
   name: string;
   createdAt: string;
   raw: any;
-}>;
+};
 
-export const Group = sequelize.define<GroupModel>(
+export const Group = sequelize.define<Model<GroupModel>>(
   "group",
   {
     id: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
@@ -60,12 +78,12 @@ export const Group = sequelize.define<GroupModel>(
   }
 );
 
-type UserGroupModel = Model<{
+export type UserGroupModel = {
   userId: string;
   groupId: string;
-}>;
+};
 
-export const UserGroup = sequelize.define<UserGroupModel>(
+export const UserGroup = sequelize.define<Model<UserGroupModel>>(
   "user_group",
   {
     userId: {
@@ -90,16 +108,16 @@ export const UserGroup = sequelize.define<UserGroupModel>(
   }
 );
 
-type ChannelModel = Model<{
+export type ChannelModel = {
   id: string;
   teamId: string;
   name: string;
   createdAt: string;
   raw: any;
   importedAt: string;
-}>;
+};
 
-export const Channel = sequelize.define<ChannelModel>(
+export const Channel = sequelize.define<Model<ChannelModel>>(
   "channel",
   {
     id: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
@@ -114,7 +132,7 @@ export const Channel = sequelize.define<ChannelModel>(
   }
 );
 
-type MessageModel = Model<{
+export type MessageModel = {
   ts: string;
   userId: string;
   channelId: string;
@@ -123,9 +141,9 @@ type MessageModel = Model<{
   text: string;
   createdAt: string;
   raw: any;
-}>;
+};
 
-export const Message = sequelize.define<MessageModel>(
+export const Message = sequelize.define<Model<MessageModel>>(
   "message",
   {
     ts: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
@@ -150,12 +168,12 @@ export const Message = sequelize.define<MessageModel>(
   }
 );
 
-type UserMentionModel = Model<{
+export type UserMentionModel = {
   messageTs: string;
   userId: string;
-}>;
+};
 
-export const UserMention = sequelize.define<UserMentionModel>(
+export const UserMention = sequelize.define<Model<UserMentionModel>>(
   "user_mention",
   {
     messageTs: {
@@ -174,12 +192,12 @@ export const UserMention = sequelize.define<UserMentionModel>(
   }
 );
 
-type GroupMentionModel = Model<{
+export type GroupMentionModel = {
   messageTs: string;
   groupId: string;
-}>;
+};
 
-export const GroupMention = sequelize.define<GroupMentionModel>(
+export const GroupMention = sequelize.define<Model<GroupMentionModel>>(
   "group_mention",
   {
     messageTs: {
@@ -198,13 +216,13 @@ export const GroupMention = sequelize.define<GroupMentionModel>(
   }
 );
 
-type ReactionModel = Model<{
+export type ReactionModel = {
   messageTs: string;
   userId: string;
   name: string;
-}>;
+};
 
-export const Reaction = sequelize.define<ReactionModel>(
+export const Reaction = sequelize.define<Model<ReactionModel>>(
   "reaction",
   {
     messageTs: {

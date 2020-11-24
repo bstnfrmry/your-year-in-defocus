@@ -1,10 +1,7 @@
 export const fr = {
   app: {
-    name: "Hello",
-    tagline: "Dites bonjour",
-  },
-  index: {
-    title: "Bonjour {{name}}",
+    name: "Your Year in Defocus",
+    tagline: "Récap de 2020 sur Slack",
   },
   404: {
     title: "Page non trouvée",
