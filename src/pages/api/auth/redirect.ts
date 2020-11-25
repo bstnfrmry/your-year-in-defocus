@@ -18,6 +18,8 @@ const Redirect: NextApiHandler = async (req, res) => {
       "channels:join",
       "channels:manage",
       "team:read",
+      "reactions:read",
+      "emoji:read",
     ],
   });
 

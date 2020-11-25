@@ -5,6 +5,7 @@ import { flatMap, last } from "lodash";
 import {
   Channel,
   ChannelModel,
+  Emoji,
   Group,
   GroupMention,
   insert,
@@ -15,6 +16,23 @@ import {
   UserGroup,
   UserMention,
 } from "~/lib/database";
+
+export const importEmojis = async (slack: WebClient, teamId: string): Promise<void> => {
+  const res = await slack.emoji.list({ limit: 1000 });
+
+  const emojis = Object.entries(res.emoji).map(([name, url]) => {
+    return {
+      name,
+      url,
+      teamId,
+    };
+  });
+
+  await insert(emojis, Emoji);
+  if (emojis.length) {
+    console.log(`Imported ${emojis.length} emojis...`);
+  }
+};
 
 export const importUsers = async (slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
   const res = await slack.users.list({ cursor, limit: 1000 });

@@ -218,6 +218,46 @@ export const GroupMention = sequelize.define<Model<GroupMentionModel>>(
   }
 );
 
+export type EmojiModel = {
+  id: string;
+  name: string;
+  url: string;
+  teamId: string;
+};
+
+export const Emoji = sequelize.define<Model<EmojiModel>>(
+  "emoji",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    url: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    teamId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      references: { model: Team, key: "id" },
+    },
+  },
+  {
+    indexes: [
+      {
+        type: "UNIQUE",
+        fields: ["team_id", "name"],
+      },
+    ],
+  }
+);
+
 export type ReactionModel = {
   messageTs: string;
   userId: string;

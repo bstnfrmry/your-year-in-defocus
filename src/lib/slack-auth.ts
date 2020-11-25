@@ -5,7 +5,7 @@ import uniqid from "uniqid";
 
 import { config } from "~/config";
 import { Channel, Op, Team, testDatabaseConnection } from "~/lib/database";
-import { importChannels, importGroups, importMessages, importUsers } from "~/lib/slack-import";
+import { importChannels, importEmojis, importGroups, importMessages, importUsers } from "~/lib/slack-import";
 
 const store: { [key: string]: Installation } = {};
 
@@ -47,6 +47,7 @@ const importTeam = async (installation: Installation) => {
     raw: team,
   });
 
+  await importEmojis(slack, installation.team.id);
   await importUsers(slack, installation.team.id);
   await importGroups(slack, installation.team.id);
   await importChannels(slack, installation.team.id);

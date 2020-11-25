@@ -2,15 +2,19 @@ import classNames from "classnames";
 import { startOfYear } from "date-fns";
 import { EmojiConvertor } from "emoji-js";
 import { groupBy } from "lodash";
-import { GetServerSideProps, GetStaticPaths, GetStaticProps, NextPage } from "next";
+import { GetStaticPaths, GetStaticProps, NextPage } from "next";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { LeftArrowIcon, RightArrowIcon, TwitterIcon } from "~/components/ui/Icon";
 import { Layout } from "~/components/ui/Layout";
-import { sequelize, Team } from "~/lib/database";
+import { Emoji, sequelize, Team } from "~/lib/database";
 
 type Props = {
+  emojis: {
+    name: string;
+    url: string;
+  }[];
   year: number;
   messagesCount: number;
   uniqueUsersCount: number;
@@ -28,6 +32,10 @@ type Props = {
     picture: string;
   }[];
   topChannels: {
+    count: number;
+    name: string;
+  }[];
+  topEmojis: {
     count: number;
     name: string;
   }[];
@@ -87,6 +95,8 @@ export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = a
   });
 
   const start = startOfYear(new Date());
+
+  const emojis = await Emoji.findAll();
 
   const [messagesRes] = await sequelize.query(
     `select
@@ -221,9 +231,24 @@ export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = a
     }
   );
 
+  const topEmojis = await sequelize.query(
+    `select count(*), reactions.name
+    from reactions
+    join messages on messages.ts = reactions.message_ts
+    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
+    group by reactions.name
+    order by 1 desc
+    limit 100`,
+    {
+      type: "SELECT",
+      replacements: { teamId: team.id, start },
+    }
+  );
+
   return {
     props: {
       year: new Date().getFullYear(),
+      emojis: emojis.map((emoji) => emoji.toJSON()),
       team: {
         name: team.name,
         picture: team.raw.icon.image_132,
@@ -234,6 +259,12 @@ export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = a
       uniqueChannelsCount: messagesRes.uniqueChannelsCount,
       botsMessagesCount: botsMessagesRes.messagesCount,
       uniqueBotsCount: botsMessagesRes.uniqueUsersCount,
+      topEmojis: topEmojis.map((emoji) => {
+        return {
+          count: emoji.count,
+          name: emoji.name,
+        };
+      }),
       topUsers: topUsers.map((user) => {
         return {
           count: user.count,
@@ -298,6 +329,8 @@ export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = a
   };
 };
 
+const EmojiContext = createContext<{ name: string; url: string }[]>([]);
+
 const DataViz: NextPage<Props> = (props) => {
   const sections = [
     { component: Home, colors: ["green", "blue"] },
@@ -308,7 +341,8 @@ const DataViz: NextPage<Props> = (props) => {
     { component: MostMentionedUsers, colors: ["orange", "yellow"] },
     { component: MostPopularMessages, colors: ["yellow", "orange"] },
     { component: FunniestMessages, colors: ["orange", "red"] },
-    { component: Thanks, colors: ["red", "pink"] },
+    { component: TopEmojis, colors: ["red", "pink"] },
+    { component: Thanks, colors: ["pink", "purple"] },
   ];
   const [index, setIndex] = useState(0);
   const section = sections[index];
@@ -332,49 +366,60 @@ const DataViz: NextPage<Props> = (props) => {
   }, [index]);
 
   return (
-    <Layout
-      className={`relative text-gray-900 space-y-10 text-xl transition duration-1000 bg-gradient-to-br from-${color1}-300 to-${color2}-300`}
-    >
-      {index !== 0 && (
-        <button
-          className={`text-center font-raleway mb-10 mt-8 bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 rounded-xl py-2 px-4 text-gray-100 border-2 shadow border-white focus:ring ring-${color2}-600 focus:outline-none`}
-          onClick={() => {
-            setIndex(0);
-          }}
-        >
-          <h2 className="text-xl font-light">Your Year in Defocus</h2>
-        </button>
-      )}
-      <section.component
-        color={color2}
-        {...props}
-        onNext={() => {
-          setIndex(index + 1);
-        }}
-      />
-      {index !== 0 && (
-        <div className="pointer-events-none absolute container mx-auto md:top-0 bottom-0 left-0 right-0 mb-4 px-4 flex items-center justify-between">
+    <EmojiContext.Provider value={props.emojis}>
+      <Layout
+        className={`relative text-gray-900 space-y-10 text-xl transition duration-1000 bg-gradient-to-br from-${color1}-300 to-${color2}-300`}
+      >
+        {index !== 0 && (
           <button
-            className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none`}
+            className={`text-center font-raleway mb-10 mt-8 bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 rounded-xl py-2 px-4 text-gray-100 border-2 shadow border-white focus:ring ring-${color2}-600 focus:outline-none`}
             onClick={() => {
-              setIndex(index - 1);
+              setIndex(0);
             }}
           >
-            <LeftArrowIcon className="w-6 h-6" />
+            <h2 className="text-xl font-light">Your Year in Defocus</h2>
           </button>
-          {index < sections.length - 1 && (
+        )}
+        <section.component
+          color={color2}
+          {...props}
+          onNext={() => {
+            setIndex(index + 1);
+          }}
+        />
+        {index !== 0 && (
+          <div className="pointer-events-none absolute container mx-auto md:top-0 bottom-0 left-0 right-0 mb-4 px-4 flex items-center justify-between">
             <button
               className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none`}
               onClick={() => {
-                setIndex(index + 1);
+                setIndex(index - 1);
               }}
             >
-              <RightArrowIcon className="w-6 h-6" />
+              <LeftArrowIcon className="w-6 h-6" />
             </button>
-          )}
-        </div>
-      )}
-    </Layout>
+            {index < sections.length - 1 && (
+              <button
+                className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none`}
+                onClick={() => {
+                  setIndex(index + 1);
+                }}
+              >
+                <RightArrowIcon className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {index !== 0 && (
+          <div className="fixed bottom-0 left-0 right-0 h-2 bg-white border-t-2 border-b border-white">
+            <div
+              className={`h-full bg-gradient-to-br from-${color1}-400 to-${color2}-500 transition-all ease-in-out`}
+              style={{ width: `${(index / (sections.length - 1)) * 100}%` }}
+            />
+          </div>
+        )}
+      </Layout>
+    </EmojiContext.Provider>
   );
 };
 
@@ -561,7 +606,6 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
 }) => {
   // return <pre>{JSON.stringify(message, null, 2)}</pre>;
   const groupedReactions = groupBy(reactions, (reaction) => reaction);
-  const emojis = new EmojiConvertor();
 
   return (
     <a
@@ -641,7 +685,7 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
                   key={reaction}
                   className={`rounded-full border text-base border-${color}-100 flex items-center space-x-2 px-2 py-px`}
                 >
-                  <span>{emojis.replace_colons(`:${reaction}:`)}</span>
+                  <EmojiView name={reaction} size={16} />
                   <span className="text-sm">{array.length}</span>
                 </div>
               );
@@ -752,6 +796,45 @@ const FunniestMessages: React.FC<SectionProps> = ({ team, color, funniestMessage
       </div>
     </>
   );
+};
+
+const TopEmojis: React.FC<SectionProps> = ({ topEmojis }) => {
+  const topEmojiCount = topEmojis[0].count;
+
+  return (
+    <>
+      <div className="mb-10 uppercase font-raleway font-bold">Most popular emojis</div>
+
+      <div className="flex flex-wrap justify-center gap-3 items-end max-w-xl">
+        {topEmojis.map((emoji) => {
+          const ratio = 20 + (emoji.count / topEmojiCount) * 40;
+
+          return (
+            <div
+              key={emoji.name}
+              className="bg-white rounded-xl shadow flex leading-normal px-2 py-1 space-x-1 items-baseline transition transform hover:scale-125"
+              style={{ fontSize: ratio }}
+            >
+              <EmojiView name={emoji.name} size={ratio} />
+              <span className="text-xs text-gray-700">x{emoji.count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+const EmojiView: React.FC<{ name: string; size: number }> = ({ name, size }) => {
+  const emojis = new EmojiConvertor();
+  const customEmojis = useContext(EmojiContext);
+
+  const customEmoji = customEmojis.find((emoji) => emoji.name === name);
+  if (customEmoji) {
+    return <img height={size} src={customEmoji.url} width={size} />;
+  }
+
+  return <span>{emojis.replace_colons(`:${name}:`)}</span>;
 };
 
 const Thanks: React.FC<SectionProps> = ({ team, color }) => {
