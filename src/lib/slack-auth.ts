@@ -38,10 +38,13 @@ const importTeam = async (installation: Installation) => {
 
   await testDatabaseConnection();
 
+  const { team } = await slack.team.info();
+
   await Team.create({
     id: installation.team.id,
     name: installation.team.name,
     publicId,
+    raw: team,
   });
 
   await importUsers(slack, installation.team.id);

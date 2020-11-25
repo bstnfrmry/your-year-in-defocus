@@ -1,7 +1,20 @@
 import { WebClient } from "@slack/web-api";
+import Promise from "bluebird";
 import { flatMap, last } from "lodash";
 
-import { Channel, Group, GroupMention, insert, Message, Reaction, User, UserGroup, UserMention } from "~/lib/database";
+import {
+  Channel,
+  ChannelModel,
+  Group,
+  GroupMention,
+  insert,
+  Message,
+  MessageModel,
+  Reaction,
+  User,
+  UserGroup,
+  UserMention,
+} from "~/lib/database";
 
 export const importUsers = async (slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
   const res = await slack.users.list({ cursor, limit: 1000 });
@@ -118,11 +131,60 @@ export const importMessages = async (slack: WebClient, channel, latest?: string)
     console.log(`Imported ${messages.length} messages from #${channel.name}...`);
   }
 
+  await Promise.map(
+    messages,
+    async (message) => {
+      if (message.threadTs) {
+        await importReplies(slack, channel, message);
+      }
+    },
+    { concurrency: 20 }
+  );
+
   if (res.has_more) {
     return importMessages(slack, channel, last(res.messages).ts);
   }
 
   await channel.update({ importedAt: new Date() });
+};
+
+const importReplies = async (slack: WebClient, channel: ChannelModel, message: MessageModel, latest?: string) => {
+  const res = await slack.conversations.replies({
+    channel: channel.id,
+    ts: message.threadTs,
+    count: 1000,
+    ...(latest && {
+      latest,
+      inclusive: true,
+    }),
+    ...(channel.importedAt && {
+      oldest: +new Date(channel.importedAt) / 1000,
+    }),
+  });
+
+  const replies = res.messages
+    .filter((reply) => reply.type === "message")
+    .map((reply) => ({
+      ts: reply.ts,
+      channelId: channel.id,
+      userId: reply.user,
+      threadTs: reply.thread_ts,
+      type: reply.subtype || reply.type,
+      text: reply.text,
+      createdAt: new Date(reply.ts.split(".")[0] * 1000),
+      raw: reply,
+    }));
+
+  await insert(replies, Message);
+  await importReactions(res.messages);
+  await importMentions(res.messages);
+  if (replies.length) {
+    console.log(`Imported ${replies.length} replies from #${channel.name}:${message.ts}...`);
+  }
+
+  if (res.has_more) {
+    return importReplies(slack, channel, message, last(res.messages).ts);
+  }
 };
 
 const importReactions = async (messages) => {

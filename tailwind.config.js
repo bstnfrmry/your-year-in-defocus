@@ -13,7 +13,7 @@ module.exports = {
       gray: colors.warmGray,
       green: colors.emerald,
       red: colors.red,
-      orange: colors.amber,
+      orange: colors.orange,
       yellow: colors.yellow,
       blue: colors.lightBlue,
       purple: colors.violet,

@@ -16,6 +16,7 @@ export type TeamModel = {
   id: string;
   publicId: string;
   name: string;
+  raw: string;
 };
 
 export const Team = sequelize.define<Model<TeamModel>>(
@@ -24,6 +25,7 @@ export const Team = sequelize.define<Model<TeamModel>>(
     id: { type: DataTypes.STRING, allowNull: false, primaryKey: true },
     publicId: { type: DataTypes.STRING, allowNull: false },
     name: { type: DataTypes.STRING, allowNull: false },
+    raw: { type: DataTypes.JSONB, allowNull: false },
   },
   {
     indexes: [{ fields: ["public_id"] }],

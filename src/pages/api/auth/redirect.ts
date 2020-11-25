@@ -17,6 +17,7 @@ const Redirect: NextApiHandler = async (req, res) => {
       "im:history",
       "channels:join",
       "channels:manage",
+      "team:read",
     ],
   });
 
