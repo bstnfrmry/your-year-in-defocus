@@ -372,7 +372,7 @@ const DataViz: NextPage<Props> = (props) => {
       >
         {index !== 0 && (
           <button
-            className={`text-center font-raleway mb-10 mt-8 bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 rounded-xl py-2 px-4 text-gray-100 border-2 shadow border-white focus:ring ring-${color2}-600 focus:outline-none`}
+            className={`text-center font-raleway mb-10 mt-8 bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 rounded-xl py-2 px-4 text-gray-100 border-2 shadow border-white focus:ring ring-${color2}-600 focus:outline-none transform transition hover:scale-110`}
             onClick={() => {
               setIndex(0);
             }}
@@ -390,7 +390,7 @@ const DataViz: NextPage<Props> = (props) => {
         {index !== 0 && (
           <div className="pointer-events-none absolute container mx-auto md:top-0 bottom-0 left-0 right-0 mb-4 px-4 flex items-center justify-between">
             <button
-              className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none`}
+              className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none transform transition hover:scale-110`}
               onClick={() => {
                 setIndex(index - 1);
               }}
@@ -399,7 +399,7 @@ const DataViz: NextPage<Props> = (props) => {
             </button>
             {index < sections.length - 1 && (
               <button
-                className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none`}
+                className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none transform transition hover:scale-110`}
                 onClick={() => {
                   setIndex(index + 1);
                 }}
