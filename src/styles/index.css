@@ -5,3 +5,11 @@
 html, body, #__next {
   height: 100%;
 }
+
+.emoji {
+  background-size: contain;
+  display: inline-block;
+  margin-bottom: -3px;
+  height: 16px;
+  width: 16px;
+}

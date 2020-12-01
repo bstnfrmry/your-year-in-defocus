@@ -801,7 +801,6 @@ const TopEmojis: React.FC<SectionProps> = ({ topEmojis }) => {
             <div
               key={emoji.name}
               className="bg-white rounded-xl shadow flex leading-normal px-2 py-1 space-x-1 items-baseline transition transform hover:scale-125"
-              style={{ fontSize: ratio }}
             >
               <EmojiView name={emoji.name} size={ratio} />
               <span className="text-xs text-gray-700">x{emoji.count}</span>
@@ -815,6 +814,8 @@ const TopEmojis: React.FC<SectionProps> = ({ topEmojis }) => {
 
 const EmojiView: React.FC<{ name: string; size: number }> = ({ name, size }) => {
   const emojis = new EmojiConvertor();
+  emojis.replace_mode = "img";
+
   const customEmojis = useContext(EmojiContext);
 
   const customEmoji = customEmojis.find((emoji) => emoji.name === name);
@@ -822,7 +823,7 @@ const EmojiView: React.FC<{ name: string; size: number }> = ({ name, size }) => 
     return <img height={size} src={customEmoji.url} width={size} />;
   }
 
-  return <span dangerouslySetInnerHTML={{ __html: emojis.replace_colons(`:${name}:`) }} />;
+  return <span dangerouslySetInnerHTML={{ __html: emojis.replace_colons(`:${name}:`) }} style={{ zoom: size / 16 }} />;
 };
 
 const Thanks: React.FC<SectionProps> = ({ team, color }) => {
