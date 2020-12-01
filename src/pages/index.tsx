@@ -53,7 +53,7 @@ const Homepage: NextPage = () => {
         className="pt-10 relative text-gray-900 space-y-10 text-xl transition duration-1000 bg-gradient-to-br from-red-300 to-orange-300"
         id="how"
       >
-        <div className="flex flex-col space-y-10 text-base">
+        <div className="flex flex-col space-y-10 text-base px-4">
           <h1 className="text-xl font-semibold">Installation guide</h1>
 
           <div className="flex flex-col space-y-2">
@@ -70,8 +70,8 @@ const Homepage: NextPage = () => {
 
           <div className="flex flex-col space-y-2">
             <p>
-              3. Upon clicking on "Generate report", our bot will start crawling your public Slack activity for 2020 and
-              generate a report
+              3. Upon clicking on "Generate report", our bot will start analyzing your{" "}
+              <span className="font-semibold">public</span> Slack activity for 2020.
             </p>
           </div>
 
