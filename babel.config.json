@@ -7,6 +7,9 @@
         "~/tests": "./tests",
         "~": "./src"
       }
+    }],
+    ["@babel/plugin-proposal-decorators", {
+      "legacy": true
     }]
    ]
 }

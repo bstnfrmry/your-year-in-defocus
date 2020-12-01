@@ -2,13 +2,15 @@ import classNames from "classnames";
 import { startOfYear } from "date-fns";
 import { EmojiConvertor } from "emoji-js";
 import { groupBy } from "lodash";
-import { GetStaticPaths, GetStaticProps, NextPage } from "next";
+import { GetServerSideProps, GetStaticPaths, GetStaticProps, NextPage } from "next";
 import Image from "next/image";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { LeftArrowIcon, RightArrowIcon, TwitterIcon } from "~/components/ui/Icon";
 import { Layout } from "~/components/ui/Layout";
-import { Emoji, sequelize, Team } from "~/lib/database";
+import { getOrm } from "~/database";
+import { Emoji } from "~/database/models/Emoji";
+import { Team } from "~/database/models/Team";
 
 type Props = {
   emojis: {
@@ -78,171 +80,137 @@ type Props = {
   }[];
 };
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  const teams = await Team.findAll();
+// export const getStaticPaths: GetStaticPaths = async () => {
+//   const orm = await getOrm();
 
-  return {
-    fallback: false,
-    paths: teams.map((team) => {
-      return { params: { id: team.publicId } };
-    }),
-  };
-};
+//   const teams = await orm.em.getRepository(Team).findAll();
 
-export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = async (ctx) => {
-  const team = await Team.findOne({
-    where: { publicId: ctx.params?.id as string },
+//   return {
+//     fallback: true,
+//     paths: teams.map((team) => {
+//       return { params: { id: team.publicId } };
+//     }),
+//   };
+// };
+
+export const getServerSideProps: GetServerSideProps<Props | Record<string, unknown>> = async (ctx) => {
+  const orm = await getOrm();
+  const connection = orm.em.getConnection();
+
+  const team = await orm.em.getRepository(Team).findOneOrFail({
+    publicId: ctx.params?.id as string,
   });
 
   const start = startOfYear(new Date());
 
-  const emojis = await Emoji.findAll();
+  const emojis = await orm.em.getRepository(Emoji).findAll();
 
-  const [messagesRes] = await sequelize.query(
+  const [messagesRes] = await connection.execute(
     `select
       count(*) as "messagesCount",
       count(distinct user_id) as "uniqueUsersCount",
       count(distinct channel_id) as "uniqueChannelsCount"
-    from messages
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    join users on users.id = messages.user_id and users.is_bot = false
-    where messages.created_at > :start`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    from message
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    join users on users.id = message.user_id and users.is_bot = false
+    where message.created_at > '${start.toISOString()}'`
   );
 
-  const [botsMessagesRes] = await sequelize.query(
+  const [botsMessagesRes] = await connection.execute(
     `select
       count(*) as "messagesCount",
       count(distinct user_id) as "uniqueUsersCount"
-    from messages
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    join users on users.id = messages.user_id and users.is_bot = true
-    where messages.created_at > :start`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    from message
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    join users on users.id = message.user_id and users.is_bot = true
+    where message.created_at > '${start.toISOString()}'`
   );
 
-  const topUsers = await sequelize.query(
+  const topUsers = await connection.execute(
     `select
       count(*),
       users.*
-    from messages
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    join users on users.id = messages.user_id and users.is_bot = false
-    where messages.created_at > :start
+    from message
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    join users on users.id = message.user_id and users.is_bot = false
+    where message.created_at > '${start.toISOString()}'
     group by users.id
     order by 1 desc
-    limit 5`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    limit 5`
   );
 
-  const topChannels = await sequelize.query(
+  const topChannels = await connection.execute(
     `select
       count(*),
-      channels.*
-    from messages
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    join users on users.id = messages.user_id and users.is_bot = false
-    where messages.created_at > :start
-    group by channels.id
+      channel.*
+    from message
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    join users on users.id = message.user_id and users.is_bot = false
+    where message.created_at > '${start.toISOString()}'
+    group by channel.id
     order by 1 desc
-    limit 8`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    limit 8`
   );
 
-  const longestThreads = await sequelize.query(
-    `select count(thread_messages.ts), messages.text, users.raw as user, messages.raw as message, channels.name as channel, channels.id as "channelId", messages.created_at as "createdAt", array_agg(distinct reply_users.raw->'profile'->>'image_192') as "replyUsers"
-    from messages
-    join messages thread_messages on messages.ts = thread_messages.thread_ts
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    join users on users.id = messages.user_id and users.is_bot = false
-    join users reply_users on thread_messages.user_id = reply_users.id
-    where messages.created_at > :start
-    group by messages.ts, users.id, channels.id
-    order by 1 desc
+  const longestThreads = await connection.execute(
+    `select message.text, users.raw as user, message.raw as message, channel.name as channel, channel.id as "channelId", message.created_at as "createdAt"
+    from message
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    join users on users.id = message.user_id and users.is_bot = false
+    where message.created_at > '${start.toISOString()}' and message.raw->>'reply_count' is not null
+    order by (message.raw->>'reply_count')::int desc
     limit 5
-    `,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    `
   );
 
-  const mostMentionedUsers = await sequelize.query(
+  const mostMentionedUsers = await connection.execute(
     `select
         count(*),
         users.*
-      from user_mentions
-      join messages on messages.ts = user_mentions.message_ts
-      join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-      join users on users.id = messages.user_id and users.is_bot = false
-      where messages.created_at > :start
+      from user_mention
+      join message on message.ts = user_mention.message_ts
+      join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+      join users on users.id = message.user_id and users.is_bot = false
+      where message.created_at > '${start.toISOString()}'
       group by users.id
       order by 1 desc
-      limit 5`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+      limit 5`
   );
 
-  const mostPopularMessages = await sequelize.query(
-    `select count(reactions.id), messages.text, users.raw as user, messages.raw as message, channels.name as channel, channels.id as "channelId", messages.created_at as "createdAt", array_agg(reactions.name) as "reactions"
-      from messages
-      join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-      join users on users.id = messages.user_id and users.is_bot = false
-      join reactions on reactions.message_ts = messages.ts
-      where messages.created_at > :start
-      group by messages.ts, users.id, channels.id
+  const mostPopularMessages = await connection.execute(
+    `select count(reaction.id), message.text, users.raw as user, message.raw as message, channel.name as channel, channel.id as "channelId", message.created_at as "createdAt", array_agg(reaction.name) as "reactions"
+      from message
+      join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+      join users on users.id = message.user_id and users.is_bot = false
+      join reaction on reaction.message_ts = message.ts
+      where message.created_at > '${start.toISOString()}'
+      group by message.id, users.id, channel.id
       order by 1 desc
       limit 5
-  `,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+  `
   );
 
-  const funniestMessages = await sequelize.query(
-    `select count(reactions.id), messages.text, users.raw as user, messages.raw as message, channels.name as channel, channels.id as "channelId", messages.created_at as "createdAt", array_agg(reactions.name) as "reactions"
-      from messages
-      join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-      join users on users.id = messages.user_id and users.is_bot = false
-      join reactions on reactions.message_ts = messages.ts and reactions.name in ('joy', 'smile', 'grinning', 'sweat_smile', 'rolling_on_the_floor_laughing')
-      where messages.created_at > :start
-      group by messages.ts, users.id, channels.id
+  const funniestMessages = await connection.execute(
+    `select count(reaction.id), message.text, users.raw as user, message.raw as message, channel.name as channel, channel.id as "channelId", message.created_at as "createdAt", array_agg(reaction.name) as "reactions"
+      from message
+      join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+      join users on users.id = message.user_id and users.is_bot = false
+      join reaction on reaction.message_ts = message.ts and reaction.name in ('joy', 'smile', 'grinning', 'sweat_smile', 'rolling_on_the_floor_laughing')
+      where message.created_at > '${start.toISOString()}'
+      group by message.id, users.id, channel.id
       order by 1 desc
       limit 5
-  `,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+  `
   );
 
-  const topEmojis = await sequelize.query(
-    `select count(*), reactions.name
-    from reactions
-    join messages on messages.ts = reactions.message_ts
-    join channels on channels.id = messages.channel_id and channels.team_id = :teamId
-    group by reactions.name
+  const topEmojis = await connection.execute(
+    `select count(*), reaction.name
+    from reaction
+    join message on message.ts = reaction.message_ts
+    join channel on channel.id = message.channel_id and channel.team_id = '${team.id}'
+    group by reaction.name
     order by 1 desc
-    limit 100`,
-    {
-      type: "SELECT",
-      replacements: { teamId: team.id, start },
-    }
+    limit 100`
   );
 
   return {
@@ -287,18 +255,18 @@ export const getStaticProps: GetStaticProps<Props | Record<string, unknown>> = a
       }),
       longestThreads: longestThreads.map((thread) => {
         return {
-          count: thread.count,
+          count: thread.message.reply_count || 0,
           text: thread.text,
           channel: thread.channel,
           channelId: thread.channelId,
           message: thread.message,
           user: thread.user,
           date: thread.createdAt.toString(),
-          replyUsers: thread.replyUsers,
+          replyUsers: thread.replyUsers || [],
           // reactions: thread.reactions,
 
           from: {
-            name: thread.user.real_name,
+            name: thread.user.real_name || null,
             picture: thread.user.profile.image_192,
           },
         };
@@ -377,7 +345,7 @@ const DataViz: NextPage<Props> = (props) => {
               setIndex(0);
             }}
           >
-            <h2 className="text-xl font-light">Your Year in Defocus</h2>
+            <h2 className="text-xl font-light">Your Year in Slack</h2>
           </button>
         )}
         <section.component
@@ -388,7 +356,7 @@ const DataViz: NextPage<Props> = (props) => {
           }}
         />
         {index !== 0 && (
-          <div className="pointer-events-none absolute container mx-auto md:top-0 bottom-0 left-0 right-0 mb-4 px-4 flex items-center justify-between">
+          <div className="pointer-events-none fixed md:top-0 bottom-0 left-0 right-0 mb-4 px-4 flex items-center justify-between">
             <button
               className={`pointer-events-auto flex items-center justify-center h-16 w-16 border-2 shadow border-transparent text-base font-medium rounded-full text-white bg-gradient-to-br from-${color2}-400 to-${color2}-500 hover:from-${color2}-500 hover:to-${color2}-600 focus:ring ring-${color2}-600 focus:outline-none transform transition hover:scale-110`}
               onClick={() => {
@@ -433,7 +401,7 @@ const Home: React.FC<SectionProps> = ({ color, team, year, onNext }) => {
           <Image className="rounded " height={66} src={team.picture} width={66} />
         </div>
         <h1 className="text-6xl font-bold mt-6 mb-12">{team.name}</h1>
-        <h2 className="text-xl font-semibold">Your Year in Defocus</h2>
+        <h2 className="text-xl font-semibold">Your Year in Slack</h2>
         <span className="text-base">A rewind of everything that happened in Slack in {year}</span>
       </header>
 
@@ -604,8 +572,9 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
   replyUsers,
   reactions,
 }) => {
-  // return <pre>{JSON.stringify(message, null, 2)}</pre>;
   const groupedReactions = groupBy(reactions, (reaction) => reaction);
+
+  console.log(message);
 
   return (
     <a
@@ -628,14 +597,20 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
           {message.blocks?.map((block, i) => {
             if (block.type === "rich_text") {
               return (
-                <div key={i}>
+                <div key={i} className="flex flex-col">
                   {block.elements.map((section) => {
-                    if (section.type === "rich_text_section" || section.type === "rich_text_quote") {
+                    if (
+                      section.type === "rich_text_section" ||
+                      section.type === "rich_text_quote" ||
+                      section.type === "rich_text_preformatted"
+                    ) {
                       return (
                         <div
                           className={classNames({
-                            "flex space-x-1": true,
+                            "inline-block whitespace-pre-line": true,
                             "border-l-4 pl-2": section.type === "rich_text_quote",
+                            [`border border-gray-100 py-1 px-2 font-mono rounded bg-gray-50 text-sm`]:
+                              section.type === "rich_text_preformatted",
                           })}
                         >
                           {section.elements.map((element) => {
@@ -650,9 +625,14 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
                                   {element.url}
                                 </a>
                               );
-                            }
-                            if (element.type === "text") {
+                            } else if (element.type === "text") {
                               return <span>{element.text}</span>;
+                            } else if (element.type === "broadcast") {
+                              return <span className="text-blue-600">@{element.range}</span>;
+                            } else if (element.type === "emoji") {
+                              return <EmojiView name={element.name} size={16} />;
+                            } else if (element.type === "user") {
+                              return <span className="text-blue-600">@{element.user_id}</span>;
                             }
                           })}
                         </div>
@@ -693,7 +673,7 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
           </div>
         )}
 
-        {message.reply_count > 0 && replyUsers.length > 0 && (
+        {message.reply_count > 0 && (
           <div className="mt-2 flex space-x-1 items-center">
             {replyUsers.map((user, i) => {
               return (
@@ -702,7 +682,7 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
                 </div>
               );
             })}
-            <div className="font-semibold text-blue-600 text-sm pl-2">{message.reply_count} replies</div>
+            <div className="font-semibold text-blue-600 text-sm">{message.reply_count} replies</div>
           </div>
         )}
       </div>
@@ -856,7 +836,7 @@ const Thanks: React.FC<SectionProps> = ({ team, color }) => {
 
       <a
         className="mt-20"
-        href="https://twitter.com/intent/tweet?text=Rewind+your+2020+Slack+with+Your+year+in+Defocus!+https://your-year-in-defocus.com"
+        href="https://twitter.com/intent/tweet?text=Rewind+your+2020+Slack+with+Your+year+in+Slack!+https://your-year-in-slack.com"
         rel="noreferrer"
         target="_blank"
       >

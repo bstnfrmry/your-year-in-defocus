@@ -1,23 +1,21 @@
+import { MikroORM } from "@mikro-orm/core";
 import { WebClient } from "@slack/web-api";
 import Promise from "bluebird";
 import { flatMap, last } from "lodash";
 
-import {
-  Channel,
-  ChannelModel,
-  Emoji,
-  Group,
-  GroupMention,
-  insert,
-  Message,
-  MessageModel,
-  Reaction,
-  User,
-  UserGroup,
-  UserMention,
-} from "~/lib/database";
+import { Channel } from "~/database/models/Channel";
+import { Emoji } from "~/database/models/Emoji";
+import { Group } from "~/database/models/Group";
+import { GroupMention } from "~/database/models/GroupMention";
+import { Message } from "~/database/models/Message";
+import { Reaction } from "~/database/models/Reaction";
+import { User } from "~/database/models/User";
+import { UserGroup } from "~/database/models/UserGroup";
+import { UserMention } from "~/database/models/UserMention";
+import { insert } from "~/database/utils";
+import { SlackMessage } from "~/lib/slack";
 
-export const importEmojis = async (slack: WebClient, teamId: string): Promise<void> => {
+export const importEmojis = async (orm: MikroORM, slack: WebClient, teamId: string): Promise<void> => {
   const res = await slack.emoji.list({ limit: 1000 });
 
   const emojis = Object.entries(res.emoji).map(([name, url]) => {
@@ -28,13 +26,13 @@ export const importEmojis = async (slack: WebClient, teamId: string): Promise<vo
     };
   });
 
-  await insert(emojis, Emoji);
+  await insert(orm, emojis, Emoji);
   if (emojis.length) {
     console.log(`Imported ${emojis.length} emojis...`);
   }
 };
 
-export const importUsers = async (slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
+export const importUsers = async (orm: MikroORM, slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
   const res = await slack.users.list({ cursor, limit: 1000 });
 
   const users = res.members.map((user) => ({
@@ -46,17 +44,17 @@ export const importUsers = async (slack: WebClient, teamId: string, cursor?: str
     raw: user,
   }));
 
-  await insert(users, User);
+  await insert(orm, users, User);
   if (users.length) {
     console.log(`Imported ${users.length} users...`);
   }
 
   if (res.response_metadata.next_cursor) {
-    return importUsers(slack, teamId, res.response_metadata.next_cursor);
+    return importUsers(orm, slack, teamId, res.response_metadata.next_cursor);
   }
 };
 
-export const importGroups = async (slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
+export const importGroups = async (orm: MikroORM, slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
   const res = await slack.usergroups.list({
     cursor,
     include_users: true,
@@ -84,14 +82,19 @@ export const importGroups = async (slack: WebClient, teamId: string, cursor?: st
     }));
   });
 
-  await insert(groups, Group);
-  await insert(userGroup, UserGroup);
+  await insert(orm, groups, Group);
+  await insert(orm, userGroup, UserGroup);
   if (groups.length) {
     console.log(`Imported ${groups.length} user groups...`);
   }
 };
 
-export const importChannels = async (slack: WebClient, teamId: string, cursor?: string): Promise<void> => {
+export const importChannels = async (
+  orm: MikroORM,
+  slack: WebClient,
+  teamId: string,
+  cursor?: string
+): Promise<void> => {
   const res = await slack.conversations.list({
     cursor,
     limit: 1000,
@@ -106,17 +109,22 @@ export const importChannels = async (slack: WebClient, teamId: string, cursor?: 
     raw: channel,
   }));
 
-  await insert(channels, Channel);
+  await insert(orm, channels, Channel);
   if (channels.length) {
     console.log(`Imported ${channels.length} channels...`);
   }
 
   if (res.response_metadata?.next_cursor) {
-    return importChannels(slack, teamId, res.response_metadata.next_cursor);
+    return importChannels(orm, slack, teamId, res.response_metadata.next_cursor);
   }
 };
 
-export const importMessages = async (slack: WebClient, channel, latest?: string) => {
+export const importMessages = async (
+  orm: MikroORM,
+  slack: WebClient,
+  channel: Channel,
+  latest?: string
+): Promise<void> => {
   const res = await slack.conversations.history({
     channel: channel.id,
     count: 1000,
@@ -129,7 +137,7 @@ export const importMessages = async (slack: WebClient, channel, latest?: string)
     }),
   });
 
-  const messages = res.messages
+  const messages = (res.messages as SlackMessage[])
     .filter((message) => message.type === "message")
     .map((message) => ({
       ts: message.ts,
@@ -138,35 +146,36 @@ export const importMessages = async (slack: WebClient, channel, latest?: string)
       threadTs: message.thread_ts,
       type: message.subtype || message.type,
       text: message.text,
-      createdAt: new Date(message.ts.split(".")[0] * 1000),
+      createdAt: new Date(parseInt(message.ts.split(".")[0]) * 1000),
       raw: message,
     }));
 
-  await insert(messages, Message);
-  await importReactions(res.messages);
-  await importMentions(res.messages);
+  await insert(orm, messages, Message);
+  await importReactions(orm, messages);
+  await importMentions(orm, messages);
   if (messages.length) {
     console.log(`Imported ${messages.length} messages from #${channel.name}...`);
   }
 
-  await Promise.map(
-    messages,
-    async (message) => {
-      if (message.threadTs) {
-        await importReplies(slack, channel, message);
-      }
-    },
-    { concurrency: 20 }
-  );
+  // await Promise.map(
+  //   messages,
+  //   async (message) => {
+  //     if (message.threadTs) {
+  //       await importReplies(orm, slack, channel, message);
+  //     }
+  //   },
+  //   { concurrency: 5 }
+  // );
 
   if (res.has_more) {
-    return importMessages(slack, channel, last(res.messages).ts);
+    return importMessages(orm, slack, channel, last(res.messages).ts);
   }
 
-  await channel.update({ importedAt: new Date() });
+  channel.importedAt = new Date();
+  orm.em.persist(channel);
 };
 
-const importReplies = async (slack: WebClient, channel: ChannelModel, message: MessageModel, latest?: string) => {
+const importReplies = async (orm: MikroORM, slack: WebClient, channel: Channel, message: Message, latest?: string) => {
   const res = await slack.conversations.replies({
     channel: channel.id,
     ts: message.threadTs,
@@ -176,36 +185,42 @@ const importReplies = async (slack: WebClient, channel: ChannelModel, message: M
       inclusive: true,
     }),
     ...(channel.importedAt && {
-      oldest: +new Date(channel.importedAt) / 1000,
+      oldest: +(new Date(channel.importedAt) / 1000),
     }),
   });
 
-  const replies = res.messages
-    .filter((reply) => reply.type === "message")
-    .map((reply) => ({
-      ts: reply.ts,
-      channelId: channel.id,
-      userId: reply.user,
-      threadTs: reply.thread_ts,
-      type: reply.subtype || reply.type,
-      text: reply.text,
-      createdAt: new Date(reply.ts.split(".")[0] * 1000),
-      raw: reply,
-    }));
+  const messages = res.messages as SlackMessage[];
 
-  await insert(replies, Message);
-  await importReactions(res.messages);
-  await importMentions(res.messages);
+  const replies = messages
+    .slice(!latest ? 1 : 0)
+    .filter((reply) => reply.type === "message")
+    .map((reply) => {
+      const message = new Message();
+      message.ts = reply.ts;
+      message.channelId = channel.id;
+      message.userId = reply.user;
+      message.threadTs = reply.thread_ts;
+      message.type = reply.subtype || reply.type;
+      message.text = reply.text;
+      message.createdAt = new Date(parseInt(reply.ts.split(".")[0]) * 1000);
+      message.raw = reply;
+
+      return message;
+    });
+
+  await insert(orm, replies, Message);
+  await importReactions(orm, messages);
+  await importMentions(orm, messages);
   if (replies.length) {
     console.log(`Imported ${replies.length} replies from #${channel.name}:${message.ts}...`);
   }
 
   if (res.has_more) {
-    return importReplies(slack, channel, message, last(res.messages).ts);
+    await importReplies(orm, slack, channel, message, last(messages)?.ts);
   }
 };
 
-const importReactions = async (messages) => {
+const importReactions = async (orm: MikroORM, messages: SlackMessage[]) => {
   const reactions = flatMap(messages, (message) =>
     flatMap(message.reactions, (reaction) =>
       reaction.users.map((userId) => ({
@@ -216,11 +231,11 @@ const importReactions = async (messages) => {
     )
   );
 
-  await insert(reactions, Reaction);
+  await insert(orm, reactions, Reaction);
 };
 
-const importMentions = async (messages) => {
-  const userMentions = await flatMap(messages, (message) => {
+const importMentions = async (orm: MikroORM, messages: SlackMessage[]) => {
+  const userMentions = flatMap(messages, (message) => {
     const mentions = message.text.match(/<@(\w+)>/g);
     if (!mentions) {
       return [];
@@ -234,9 +249,9 @@ const importMentions = async (messages) => {
     });
   });
 
-  await insert(userMentions, UserMention);
+  await insert(orm, userMentions, UserMention);
 
-  const groupMentions = await flatMap(messages, (message) => {
+  const groupMentions = flatMap(messages, (message) => {
     const mentions = message.text.match(/<!subteam\^(\w+)\|@.+>/g);
     if (!mentions) {
       return [];
@@ -250,5 +265,5 @@ const importMentions = async (messages) => {
     });
   });
 
-  await insert(groupMentions, GroupMention);
+  await insert(orm, groupMentions, GroupMention);
 };

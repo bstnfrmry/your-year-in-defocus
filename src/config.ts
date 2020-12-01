@@ -10,11 +10,12 @@ export const config = {
   },
 
   slack: {
+    appId: process.env["NEXT_PUBLIC_SLACK_APP_ID"] as string,
     clientId: process.env["SLACK_CLIENT_ID"] as string,
     clientSecret: process.env["SLACK_CLIENT_SECRET"] as string,
   },
 
   database: {
-    uri: process.env["DATABASE_URI"] as string,
+    url: process.env["DATABASE_URL"] as string,
   },
 };

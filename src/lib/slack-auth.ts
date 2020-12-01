@@ -1,78 +1,58 @@
-import { Installation, InstallProvider } from "@slack/oauth";
+import { Installation as SlackInstallation, InstallProvider } from "@slack/oauth";
 import { WebClient } from "@slack/web-api";
-import Promise from "bluebird";
-import uniqid from "uniqid";
 
 import { config } from "~/config";
-import { Channel, Op, Team, testDatabaseConnection } from "~/lib/database";
-import { importChannels, importEmojis, importGroups, importMessages, importUsers } from "~/lib/slack-import";
-
-const store: { [key: string]: Installation } = {};
+import { getOrm } from "~/database";
+import { Installation } from "~/database/models/Installation";
 
 export const installer = new InstallProvider({
   clientId: config.slack.clientId,
   clientSecret: config.slack.clientSecret,
   stateSecret: "hello",
   installationStore: {
-    storeInstallation: async (installation) => {
-      store[installation.team.id] = installation;
+    storeInstallation: async (payload) => {
+      const orm = await getOrm();
 
-      importTeam(installation);
+      const installation = new Installation();
+      installation.teamId = payload.team.id;
+      installation.token = payload.bot?.token as string;
+      installation.raw = payload;
+
+      await orm.em.persistAndFlush(installation);
+
+      const slack = new WebClient(installation.token);
+
+      const authUrl = `${config.app.url}/api/auth/redirect?teamId=${installation.teamId}`;
+
+      slack.chat.postMessage({
+        channel: payload.user.id,
+        text: "Welcome to *Your Year in Slack*. :tada:",
+        attachments: [
+          {
+            text:
+              "Whenever you're ready, start generating your yearly report.\n\nWe'll ask you to authenticate with Slack before starting.",
+            color: "good",
+            actions: [
+              {
+                type: "button",
+                text: "Generate report",
+                url: authUrl,
+                style: "primary",
+              },
+            ],
+          },
+        ],
+      });
     },
 
     fetchInstallation: async (installQuery) => {
-      return store[installQuery.teamId];
+      const orm = await getOrm();
+
+      const installation = await orm.em.getRepository(Installation).findOneOrFail({
+        teamId: installQuery.teamId,
+      });
+
+      return installation.raw as SlackInstallation;
     },
   },
 });
-
-const importTeam = async (installation: Installation) => {
-  const publicId = uniqid();
-  const slack = new WebClient(installation.bot?.token);
-
-  slack.chat.postMessage({
-    channel: installation.user.id,
-    text:
-      ":tada: Welcome and thanks for purchasing *Your year in defocus*\n:robot_face: Our bot is currently processing your data. It should take a few minutes. I'll send you a message when it's done :wink:",
-  });
-
-  await testDatabaseConnection();
-
-  const { team } = await slack.team.info();
-
-  await Team.create({
-    id: installation.team.id,
-    name: installation.team.name,
-    publicId,
-    raw: team,
-  });
-
-  await importEmojis(slack, installation.team.id);
-  await importUsers(slack, installation.team.id);
-  await importGroups(slack, installation.team.id);
-  await importChannels(slack, installation.team.id);
-
-  const channels = await Channel.findAll({
-    where: {
-      teamId: installation.team.id,
-      importedAt: { [Op.eq]: null },
-    },
-    order: [["createdAt", "asc"]],
-  });
-  await Promise.mapSeries(channels, async (channel) => {
-    await slack.conversations.join({
-      channel: channel.id,
-    });
-
-    await importMessages(slack, channel);
-
-    await slack.conversations.leave({
-      channel: channel.id,
-    });
-  });
-
-  slack.chat.postMessage({
-    channel: installation.user.id,
-    text: `:white_check_mark: Your data has been imported and is available at ${config.app.url}/${publicId}`,
-  });
-};

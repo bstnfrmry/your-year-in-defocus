@@ -1,6 +1,6 @@
 export const fr = {
   app: {
-    name: "Your Year in Defocus",
+    name: "Your Year in Slack",
     tagline: "Récap de 2020 sur Slack",
   },
   404: {

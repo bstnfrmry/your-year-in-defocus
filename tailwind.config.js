@@ -7,6 +7,7 @@ module.exports = {
     extend: {},
     fontFamily: {
       raleway: ["Raleway", "sans serif"],
+      mono: ["Roboto Mono", "mono"],
     },
     colors: {
       white: colors.white,
