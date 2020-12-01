@@ -14,8 +14,11 @@ const Homepage: NextPage = () => {
       <Layout className="relative text-gray-900 space-y-10 text-xl transition duration-1000 bg-gradient-to-br from-red-300 to-orange-300">
         <div className="flex flex-col h-full justify-center items-center max-w-2xl ">
           <header className="text-center  mt-10">
-            <h2 className="text-5xl font-semibold font-raleway">Your Year In Slack</h2>
-            <h3 className="mt-4 font-raleway">a 2020 Slack Rewind</h3>
+            <div className="relative inline-block text-5xl font-semibold font-raleway">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-600 transform -rotate-1 scale-y-150 scale-x-105 shadow-2xl"></div>
+              <h2 className="relative text-white">Your Year In Slack</h2>
+            </div>
+            <h3 className="mt-8 font-raleway">a 2020 Slack Rewind</h3>
             <p className="mt-10 text-base">
               <span className="font-semibold">Your Year in Slack</span> is a Slack application that generates a
               tailor-made yearly report for your Slack workspace. Share your report with colleagues and guess who's the
