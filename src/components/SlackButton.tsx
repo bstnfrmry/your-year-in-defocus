@@ -13,8 +13,8 @@ export const SlackButton: React.FC = () => {
       <Image
         alt="Sign in with Slack"
         height={40}
-        src="https://platform.slack-edge.com/img/sign_in_with_slack@2x.png"
-        width={172}
+        src="https://platform.slack-edge.com/img/add_to_slack@2x.png"
+        width={139}
       />
     </a>
   );

@@ -574,8 +574,6 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
 }) => {
   const groupedReactions = groupBy(reactions, (reaction) => reaction);
 
-  console.log(message);
-
   return (
     <a
       className="flex space-x-2 transform transition hover:scale-105 bg-white rounded p-1 pr-2 shadow"
