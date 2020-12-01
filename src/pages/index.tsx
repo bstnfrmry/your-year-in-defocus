@@ -36,7 +36,7 @@ const Homepage: NextPage = () => {
           <div className="mt-20">
             <SlackButton />
           </div>
-          <div className="mt-20 flex space-x-4">
+          <div className="mt-20 flex">
             <a
               className="text-base underline text-blue-600 cursor-pointer"
               onClick={() => {
@@ -47,6 +47,10 @@ const Homepage: NextPage = () => {
               }}
             >
               Installation guide
+            </a>
+            <span className="mx-2 text-base text-orange-400">·</span>
+            <a className="text-base underline text-blue-600 cursor-pointer" href="mailto:bastien.formery@gmail.com">
+              Contact
             </a>
           </div>
         </div>

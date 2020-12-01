@@ -574,6 +574,8 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
 }) => {
   const groupedReactions = groupBy(reactions, (reaction) => reaction);
 
+  console.log(message);
+
   return (
     <a
       className="flex space-x-2 transform transition hover:scale-105 bg-white rounded p-1 pr-2 shadow"
@@ -588,10 +590,18 @@ const SlackMessage: React.FC<SlackMessageProps> = ({
       </div>
       <div className="flex flex-col flex-1">
         <div className="flex justify-between items-baseline w-full">
-          <span className="flex-1 text-base font-medium">{user.real_name}</span>
+          <span className="flex-1 text-base font-medium">{user.profile.real_name}</span>
           <span className="text-gray-500 text-sm ml-10">in #{channel}</span>
         </div>
-        <div className="flex flex-col text-base">
+        <div className="flex flex-col text-base leading-tight">
+          {message.files?.map((file, i) => {
+            return (
+              <div key={i}>
+                <img height={file.thumb_480_h / 2} src={file.thumb_480} width={file.thumb_480_w / 2} />
+              </div>
+            );
+          })}
+
           {message.blocks?.map((block, i) => {
             if (block.type === "rich_text") {
               return (
