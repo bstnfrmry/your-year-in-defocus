@@ -1,0 +1,19 @@
+#!/bin/bash
+
+mkdir build
+
+cd build
+
+git clone git@github.com:bstnfrmry/your-year-in-defocus.git --depth 1
+
+cd your-year-in-defocus
+
+cp ../../.env.production .
+
+yarn deploy
+
+cd ../..
+
+rm -rf build
+
+yarn logs
