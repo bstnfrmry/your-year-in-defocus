@@ -10,10 +10,12 @@ cd your-year-in-defocus
 
 cp ../../.env.production .
 
-yarn deploy
+heroku container:push web -a your-year-in-slack
+
+heroku container:release web -a your-year-in-slack
 
 cd ../..
 
 rm -rf build
 
-yarn logs
+heroku logs --tail -a your-year-in-slack

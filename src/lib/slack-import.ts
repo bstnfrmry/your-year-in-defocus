@@ -137,7 +137,9 @@ export const importMessages = async (
     }),
   });
 
-  const messages = (res.messages as SlackMessage[])
+  const slackMessages = res.messages as SlackMessage[];
+
+  const messages = slackMessages
     .filter((message) => message.type === "message")
     .map((message) => ({
       ts: message.ts,
@@ -151,8 +153,8 @@ export const importMessages = async (
     }));
 
   await insert(orm, messages, Message);
-  await importReactions(orm, messages);
-  await importMentions(orm, messages);
+  await importReactions(orm, slackMessages);
+  await importMentions(orm, slackMessages);
   if (messages.length) {
     console.log(`Imported ${messages.length} messages from #${channel.name}...`);
   }

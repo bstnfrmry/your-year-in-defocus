@@ -9,8 +9,7 @@
     "check-ts": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx,js,json",
     "orm": "mikro-orm",
-    "deploy": "heroku container:push web -a your-year-in-slack && heroku container:release web -a your-year-in-slack",
-    "logs": "heroku logs --tail -a your-year-in-slack"
+    "tunnel": "lt -p 3000 -s your-year-in-slack"
   },
   "dependencies": {
     "@headlessui/react": "^0.2.0",
