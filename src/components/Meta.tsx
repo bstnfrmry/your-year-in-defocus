@@ -10,7 +10,7 @@ export const Meta: React.FC = () => {
   const title = t("app.name");
   const description = t("app.tagline");
   const url = config.app.url;
-  const ogImageUrl = `${url}/images/og-image.jpg`;
+  const ogImageUrl = `${url}/og-image.png`;
 
   return (
     <Head>
@@ -18,8 +18,8 @@ export const Meta: React.FC = () => {
 
       <meta content={description} name="Description" />
 
-      <link href="/images/icon-512.png" rel="shortcut icon" type="image/png" />
-      <link href="/images/icon-512.png" rel="apple-touch-icon" />
+      <link href="/logo.png" rel="shortcut icon" type="image/png" />
+      <link href="/logo.png" rel="apple-touch-icon" />
 
       <meta key="description" content={description} name="description" />
       <meta key="ogTitle" content={title} property="og:title" />

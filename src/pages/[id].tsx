@@ -822,7 +822,7 @@ const EmojiView: React.FC<{ name: string; size: number }> = ({ name, size }) => 
     return <img height={size} src={customEmoji.url} width={size} />;
   }
 
-  return <span>{emojis.replace_colons(`:${name}:`)}</span>;
+  return <span dangerouslySetInnerHTML={{ __html: emojis.replace_colons(`:${name}:`) }} />;
 };
 
 const Thanks: React.FC<SectionProps> = ({ team, color }) => {
