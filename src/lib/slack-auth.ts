@@ -13,11 +13,17 @@ export const installer = new InstallProvider({
     storeInstallation: async (payload) => {
       const orm = await getOrm();
 
+      const existingInstallation = await orm.em.getRepository(Installation).findOne({
+        teamId: payload.team.id,
+      });
+      if (existingInstallation) {
+        await orm.em.getRepository(Installation).removeAndFlush(existingInstallation);
+      }
+
       const installation = new Installation();
       installation.teamId = payload.team.id;
       installation.token = payload.bot?.token as string;
       installation.raw = payload;
-
       await orm.em.persistAndFlush(installation);
 
       const slack = new WebClient(installation.token);

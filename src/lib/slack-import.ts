@@ -1,6 +1,7 @@
 import { MikroORM } from "@mikro-orm/core";
 import { WebClient } from "@slack/web-api";
 import Promise from "bluebird";
+import { startOfYear } from "date-fns";
 import { flatMap, last } from "lodash";
 
 import { Channel } from "~/database/models/Channel";
@@ -135,6 +136,9 @@ export const importMessages = async (
     ...(channel.importedAt && {
       oldest: +new Date(channel.importedAt) / 1000,
     }),
+    ...(!channel.importedAt && {
+      oldest: +(startOfYear(new Date()) / 1000),
+    }),
   });
 
   const slackMessages = res.messages as SlackMessage[];
@@ -162,7 +166,7 @@ export const importMessages = async (
   // await Promise.map(
   //   messages,
   //   async (message) => {
-  //     if (message.threadTs) {
+  //     if (message.threadTs && message.type === "message") {
   //       await importReplies(orm, slack, channel, message);
   //     }
   //   },
